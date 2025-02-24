@@ -1,4 +1,5 @@
 using AppApi.Data;
+using AppApi.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,6 +11,8 @@ builder.Services.AddControllers();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DbConnection"))
 );
+
+builder.Services.AddScoped<PostService>();
 
 var app = builder.Build();
 

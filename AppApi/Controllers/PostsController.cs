@@ -1,6 +1,7 @@
 ﻿using AppApi.Data;
 using AppApi.Model.Dto;
 using AppApi.Model.Entities;
+using AppApi.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AppApi.Controllers
@@ -9,98 +10,70 @@ namespace AppApi.Controllers
     [ApiController]
     public class PostsController : ControllerBase
     {
-        private readonly ApplicationDbContext db;
+        private readonly PostService service;
 
-        public PostsController(ApplicationDbContext db)
+        public PostsController(PostService service)
         {
-            this.db = db;
+            this.service = service;
         }
 
         [HttpGet]
         public ActionResult GetAllPosts()
         {
-            var posts = db.Posts.OrderByDescending(x => x.Id).ToList();
-
-            var postsDto = new List<PostDto>();
-            foreach(var post in posts)
-            {
-                postsDto.Add(new PostDto()
-                {
-                    Id = post.Id,
-                    Title = post.Title,
-                    Body = post.Body,
-
-                });
-            }
-
-            return Ok(postsDto);
+            return Ok(service.GetAllPosts());
         }
 
         [HttpGet("{id:int}")]
-        public ActionResult GetPost(int id) 
+        public ActionResult GetPost(int id)
         {
-            var post = db.Posts.FirstOrDefault(x => x.Id == id);
+            var post = service.GetPost(id);
             if (post == null) 
             {
                 return NotFound("Post not found!");
             }
-
-            var postDto = new PostDto
-            {
-                Id = post.Id,
-                Title = post.Title,
-                Body = post.Body,
-            };
-
-
-            return Ok(postDto);
+            return Ok(post);
         }
 
         [HttpPost]
-        public ActionResult CreatePost([FromBody] PostDto postDto)
+        public ActionResult<PostDto> CreatePost([FromBody] PostDto postDto)
         {
-            var post = new Post
+            if (postDto == null)
             {
-                Id = postDto.Id,
-                Title = postDto.Title,
-                Body = postDto.Body,
-            };
+                return BadRequest("Post data is null.");
+            }
 
-            db.Posts.Add(post);
-            db.SaveChanges();
+            var post = service.CreatePost(postDto);
 
-            return CreatedAtAction(nameof(GetPost), new {Id = post.Id }, post);
+            return CreatedAtAction(nameof(GetPost), new { id = post.Value?.Id }, post.Value);
         }
 
         [HttpPut("{id:int}")]
-        public ActionResult UpdatePost(int id,[FromBody]PostDto postDto)
+        public ActionResult<PostDto> UpdatePost(int id, [FromBody] PostDto postDto)
         {
-            var post = db.Posts.Find(id);
-            if (post == null)
+            if (postDto == null)
             {
-                return NotFound();
+                return BadRequest("Post data is null.");
             }
 
-           post.Title = postDto.Title;
-           post.Body = postDto.Body;
+            var result = service.UpdatePost(id, postDto);
 
-            db.SaveChanges();
+            if (result == null)
+            {
+                return NotFound("Post not found.");
+            }
 
-            return NoContent();
+            return NoContent(); 
         }
 
         [HttpDelete("{id:int}")]
         public ActionResult DeletePost(int id)
         {
-            var post = db.Posts.FirstOrDefault(x => x.Id == id);
-            if (post == null) 
+           var post = service.DeletePost(id);
+            if(post == null)
             {
-                return NotFound();
+                return NotFound("Not found");
             }
-
-            db.Posts.Remove(post);
-            db.SaveChanges();
             return NoContent();
         }
     }
-}
+    }
